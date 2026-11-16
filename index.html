@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مواعيد العلاج</title>
+<style>
+:root{--bg:#f4f7f6;--c:#fff;--t:#1d2b28;--a:#0f9d82;--m:#6b7c78}
+@media(prefers-color-scheme:dark){:root{--bg:#111917;--c:#1b2623;--t:#e6f0ed;--m:#8fa39e}}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--t);padding:16px;max-width:520px;margin-inline:auto}
+h1{font-size:20px;margin:4px 0}
+.sub{color:var(--m);font-size:13px;margin-bottom:12px}
+.bar{height:8px;background:#0001;border-radius:8px;overflow:hidden;margin:8px 0 16px}
+.bar i{display:block;height:100%;background:var(--a);width:0;transition:.3s}
+.row{display:flex;align-items:center;gap:12px;background:var(--c);padding:12px;border-radius:14px;margin-bottom:10px}
+.row.done{opacity:.55}
+.row.done .n{text-decoration:line-through}
+.row input[type=checkbox]{width:26px;height:26px;accent-color:var(--a)}
+.n{flex:1;font-size:16px}
+.n small{display:block;color:var(--m);font-size:12px}
+input[type=time]{border:1px solid #0003;background:transparent;color:var(--t);border-radius:8px;padding:4px;font-size:14px}
+button{background:var(--a);color:#fff;border:0;border-radius:12px;padding:12px;font-size:15px;width:100%;margin-top:6px}
+#msg{font-size:13px;color:var(--m);margin-top:8px;line-height:1.7}
+h2{font-size:17px;margin:24px 0 8px}
+.h{background:var(--c);border-radius:14px;padding:12px;margin-bottom:10px;font-size:14px}
+.h b{display:flex;justify-content:space-between;margin-bottom:6px}
+.h span{display:inline-block;margin:2px 0 2px 8px}
+</style>
+</head>
+<body>
+<h1>💊 مواعيد العلاج</h1>
+<div class="sub" id="d"></div>
+<div class="bar"><i id="p"></i></div>
+<div id="list"></div>
+<button id="en">تفعيل الإشعارات 🔔</button>
+<div id="msg"></div>
+<h2>📅 السجل</h2>
+<div id="hist"></div>
+<script>
+const ITEMS=[
+{id:"s1",n:"المعدة",k:"🟡",t:"07:00"},
+{id:"c1",n:"القولون",k:"🟢",t:"08:00",s:"1/3"},
+{id:"c2",n:"القولون",k:"🟢",t:"14:00",s:"2/3"},
+{id:"c3",n:"القولون",k:"🟢",t:"21:00",s:"3/3"},
+{id:"y1",n:"الخميرة",k:"🟤",t:"09:00",s:"1/3"},
+{id:"y2",n:"الخميرة",k:"🟤",t:"15:00",s:"2/3"},
+{id:"y3",n:"الخميرة",k:"🟤",t:"21:30",s:"3/3"},
+{id:"i1",n:"مكمل الحديد",k:"🔴",t:"11:00"}];
+const today=()=>new Date().toLocaleDateString("en-CA");
+let S;try{S=JSON.parse(localStorage.meds)}catch(e){}
+S=S||{};S.t=S.t||{};S.done=S.done||{};S.fired=S.fired||{};
+const save=()=>{try{localStorage.meds=JSON.stringify(S)}catch(e){}};
+const tm=i=>S.t[i.id]||i.t;
+let V=today();
+function go(n){const dt=new Date(V+"T12:00");dt.setDate(dt.getDate()+n);const v=dt.toLocaleDateString("en-CA");if(v>today())return;V=v;render()}
+function render(){
+ const D=V,T=today(),dn=S.done[D]||{};
+ document.getElementById("d").innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><a onclick="go(-1)" style="color:var(--a);padding:6px">→ اليوم السابق</a><b style="color:var(--t)">${D===T?"اليوم":""} ${new Date(D+"T12:00").toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long"})}</b><a onclick="go(1)" style="color:${D===T?"#0000":"var(--a)"};padding:6px">اليوم التالي ←</a></div>`;
+ const L=document.getElementById("list");L.innerHTML="";
+ [...ITEMS].sort((a,b)=>tm(a).localeCompare(tm(b))).forEach(i=>{
+  const r=document.createElement("div");r.className="row"+(dn[i.id]?" done":"");
+  r.innerHTML=`<input type=checkbox ${dn[i.id]?"checked":""}><div class=n>${i.k} ${i.n}${i.s?`<small>جرعة ${i.s}</small>`:""}</div><input type=time value="${tm(i)}">`;
+  r.children[0].onchange=e=>{S.done[D]=S.done[D]||{};S.done[D][i.id]=e.target.checked;save();render()};
+  r.children[2].onchange=e=>{S.t[i.id]=e.target.value;save();render()};
+  L.appendChild(r)});
+ const c=ITEMS.filter(i=>dn[i.id]).length;
+ document.getElementById("p").style.width=c/ITEMS.length*100+"%";
+ S.done[T]=S.done[T]||{};save();
+ const H=document.getElementById("hist");H.innerHTML="";
+ const ks=Object.keys(S.done).sort(),days=[];
+ for(let dt=new Date(ks[0]+"T12:00");;dt.setDate(dt.getDate()+1)){const v=dt.toLocaleDateString("en-CA");days.push(v);if(v>=T)break}
+ days.reverse().forEach(d=>{
+  const x=S.done[d]||{},n=ITEMS.filter(i=>x[i.id]).length;
+  const lab=d===T?"اليوم":new Date(d+"T12:00").toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long"});
+  const el=document.createElement("div");el.className="h";el.style.cursor="pointer";
+  el.onclick=()=>{V=d;render();scrollTo(0,0)};
+  if(d===D)el.style.outline="2px solid var(--a)";
+  el.innerHTML=`<b><span>${lab}</span><span>${n}/${ITEMS.length}</span></b>`+
+   ITEMS.map(i=>`<span>${x[i.id]?"✅":"⬜"} ${i.n}${i.s?" "+i.s:""}</span>`).join("");
+  H.appendChild(el)});
+}
+function notify(i){
+ const o={body:"حان موعد: "+i.n+(i.s?" ("+i.s+")":""),tag:i.id,requireInteraction:true,vibrate:[200,100,200]};
+ try{if(navigator.serviceWorker&&navigator.serviceWorker.controller)return navigator.serviceWorker.ready.then(r=>r.showNotification("💊 علاج",o));
+ new Notification("💊 علاج",o)}catch(e){}
+ document.getElementById("msg").textContent="⏰ موعد "+i.n;
+}
+function tick(){
+ const D=today(),now=new Date(),hm=now.toTimeString().slice(0,5);
+ S.fired[D]=S.fired[D]||{};
+ const dn=S.done[D]||{};
+ ITEMS.forEach(i=>{
+  const t=tm(i);
+  if(t<=hm&&!dn[i.id]&&!S.fired[D][i.id]){
+   S.fired[D][i.id]=1;
+   if(Notification.permission==="granted")notify(i);
+   else{document.getElementById("msg").textContent="⏰ موعد "+i.n;document.title="⏰ "+i.n;try{navigator.vibrate([300,150,300])}catch(e){}}
+  }});
+ save();
+}
+document.getElementById("en").onclick=()=>{
+ if(!("Notification" in window)){msg.textContent="المتصفح لا يدعم الإشعارات";return}
+ if(location.protocol==="file:"){msg.innerHTML="⚠️ المتصفح بيمنع الإشعارات للملفات المفتوحة من الموبايل مباشرة. لازم الصفحة تتفتح من رابط https (انشرها على GitHub Pages أو Netlify Drop).";return}
+ Notification.requestPermission().then(p=>{msg.innerHTML=p==="granted"?"✅ الإشعارات متفعلة (سيب الصفحة مفتوحة)":"❌ مرفوضة. اضغط على القفل 🔒 جنب الرابط ← الأذونات ← الإشعارات ← سماح، وبعدها حدّث الصفحة."})};
+render();tick();setInterval(tick,20000);
+document.addEventListener("visibilitychange",()=>{render();tick()});
+</script>
+</body>
+</html>
